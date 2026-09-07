@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDS_Backend - لوحة الدخول</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #0f3460, #16213e);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            width: 90%;
+            max-width: 520px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .logo { font-size: 2.4em; color: #0f3460; margin-bottom: 5px; font-weight: bold; }
+        .subtitle { color: #888; margin-bottom: 25px; }
+        .muted { color: #aaa; font-size: 0.85em; }
+        .service-card {
+            border: 2px solid #e8e8e8;
+            border-radius: 12px;
+            padding: 22px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        .service-card h3 { color: #0f3460; margin-bottom: 5px; }
+        .service-card p { color: #888; font-size: 0.9em; margin-bottom: 12px; }
+        .btn {
+            display: block;
+            padding: 14px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            color: white;
+        }
+        .btn-sds { background: #0f3460; }
+        .btn-sds:hover { background: #16213e; }
+        .loading { color: #888; padding: 20px; }
+        .error { color: #dc3545; padding: 20px; }
+        .warn { color: #b8860b; padding: 20px; }
+        .meta { color: #888; font-size: 0.85em; margin-top: 12px; }
+        .refresh-btn {
+            margin-top: 20px;
+            background: none;
+            border: 1px solid #ddd;
+            padding: 10px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #666;
+            font-size: 0.95em;
+        }
+        .refresh-btn:hover { border-color: #0f3460; color: #0f3460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">SDS</div>
+        <div class="subtitle">لوحة الدخول - نظام التوزيع</div>
+        <div id="content">
+            <div class="loading">جارٍ تحميل الرابط...</div>
+        </div>
+        <div id="status" class="meta"></div>
+        <button class="refresh-btn" onclick="loadUrl()">تحديث الرابط</button>
+    </div>
+    <script>
+        const GIST_ID = "cf987343d0d9f817703b518e6772bca7";
+        const FILE_NAME = "sds_url.txt";
+
+        async function loadUrl() {
+            const el = document.getElementById("content");
+            const st = document.getElementById("status");
+            el.innerHTML = '<div class="loading">جارٍ التحميل...</div>';
+            st.textContent = "";
+            try {
+                const resp = await fetch(`https://api.github.com/gists/${GIST_ID}`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const gist = await resp.json();
+                let content = "";
+                for (const [name, file] of Object.entries(gist.files)) {
+                    if (name === FILE_NAME) content = (file.content || "").trim();
+                }
+
+                let url = "";
+                let ts = null;
+                try {
+                    const parsed = JSON.parse(content);
+                    url = parsed.url || "";
+                    ts = parsed.ts || null;
+                } catch (err) {
+                    url = content;
+                }
+
+                if (url && url.includes("trycloudflare.com")) {
+                    el.innerHTML = `
+                        <div class="service-card">
+                            <h3>SDS_Backend</h3>
+                            <p>نظام التوزيع</p>
+                            <a href="${url}" target="_blank" class="btn btn-sds">فتح النظام</a>
+                        </div>`;
+                    st.textContent = ts ? `آخر تحديث: ${new Date(ts).toLocaleString("ar-EG")}` : "";
+                } else {
+                    el.innerHTML = '<div class="error">لا يوجد رابط نشط.</div>';
+                }
+            } catch (err) {
+                el.innerHTML = '<div class="error">خطأ: ' + err.message + '</div>';
+            }
+        }
+        loadUrl();
+        setInterval(loadUrl, 30000);
+    </script>
+</body>
+</html>
